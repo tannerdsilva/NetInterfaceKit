@@ -24,6 +24,7 @@ struct NetInterfaceKit {
 		var buildResults = Set<NetworkInterface>()
 		while (i.pointee.if_index != 0 && i.pointee.if_name != nil) {
 			let nameString = String(cString:i.pointee.if_name)
+			Self.logger.info("found new interface", metadata:["name":"\(nameString)"])
 			buildResults.update(with:NetworkInterface(index:i.pointee.if_index, name:nameString))
 			i = i.advanced(by:1)
 		}
