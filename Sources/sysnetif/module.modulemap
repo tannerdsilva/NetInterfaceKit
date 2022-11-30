@@ -1,0 +1,4 @@
+module sysnetif [system] {
+	header "/usr/include/net/if.h"
+	export *
+}

@@ -1,0 +1,4 @@
+module sysioctl [system] {
+	header "/usr/include/sys/ioctl.h"
+	export *
+}
