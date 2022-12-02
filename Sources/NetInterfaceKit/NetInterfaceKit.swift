@@ -14,7 +14,7 @@ public struct NetInterfaceKit {
 		let name:String
 		let index:UInt32
 		let macAddress:String
-//		let flags:InterfaceFlags
+		let flags:InterfaceFlags
 	}
 	
 	static func allInterfaces() throws -> Set<NetworkInterface> {
@@ -48,15 +48,11 @@ public struct NetInterfaceKit {
 				throw Error.ioctlError
 			}
 			
-			var newString = malloc(32);
-			let getAddr = interfaceRequestItem.ifr_ifru.ifru_hwaddr.sa_data
-			snprintf(newString, 32, "%02x:%02x:%02x:%02x:%02x:%02x", getAddr.0, getAddr.1, getAddr.2, getAddr.3, getAddr.4, getAddr.5)
-			defer {
-				free(newString);
-			}
-			let macString = String(cString:newString);
+			var macStr = macstr_t()
+			getHWAddr(&interfaceRequestItem, &macStr);
+			let macString = String(cString:macstrToCstr(&macStr));
 			Self.logger.trace("found new interface", metadata:["name":"\(nameString)", "mac":"\(macString)"])
-			buildResults.update(with:NetworkInterface(name:nameString, index:i.pointee.if_index, macAddress:macString))
+			buildResults.update(with:NetworkInterface(name:nameString, index:i.pointee.if_index, macAddress:macString, flags:InterfaceFlags(rawValue:interfaceRequestItem.ifr_flags)))
 			i = i.advanced(by:1)
 		}
 		
