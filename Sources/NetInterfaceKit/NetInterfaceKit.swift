@@ -1,33 +1,64 @@
-import sysnetif
 import Logging
+import sysincludes
 
-struct NetInterfaceKit {
-	static var logger = Logger(label:"NetInterfaceKit")
+public struct NetInterfaceKit {
+	public static var logger = Logger(label:"net-interface-kit")
 	
-	enum Error:Swift.Error {
+	public enum Error:Swift.Error {
 		case noInterfacesFound
+		case socketOpenError
+		case ioctlError
 	}
-	
+		
 	struct NetworkInterface:Hashable {
-		let index:UInt32
 		let name:String
+		let index:UInt32
+		let macAddress:String
+		let flags:InterfaceFlags
 	}
 	
 	static func allInterfaces() throws -> Set<NetworkInterface> {
+		// list the name of interfaces
 		guard let getNameArray = if_nameindex() else {
+			Self.logger.error("allInterfaces() called but no network interfaces found")
 			throw Error.noInterfacesFound
 		}
 		defer {
 			if_freenameindex(getNameArray)
 		}
+		
 		var i = getNameArray;
 		var buildResults = Set<NetworkInterface>()
+		
+		let socketfd = socket(AF_INET, Int32(SOCK_STREAM.rawValue), Int32(IPPROTO_IP))
+		guard socketfd != -1 else {
+			Self.logger.error("allInterfaces() called but unable to open INET socket")
+			throw Error.socketOpenError
+		}
+		defer {
+			close(socketfd)
+		}
+		
+		var interfaceRequestItem = ifreq()
 		while (i.pointee.if_index != 0 && i.pointee.if_name != nil) {
+			strcpy(&interfaceRequestItem.ifr_ifrn.ifrn_name, i.pointee.if_name);
 			let nameString = String(cString:i.pointee.if_name)
-			Self.logger.info("found new interface", metadata:["name":"\(nameString)"])
-			buildResults.update(with:NetworkInterface(index:i.pointee.if_index, name:nameString))
+			
+			guard ioctlCall(socketfd, SIOCGIFHWADDR, &interfaceRequestItem) != -1 else {
+				throw Error.ioctlError
+			}
+			
+			var macStr = macstr_t()
+			getHWAddr(&interfaceRequestItem, &macStr);
+			let macString = String(cString:macstrToCstr(&macStr));
+			let makeInterfaceFlags = InterfaceFlags(rawValue:interfaceRequestItem.ifr_ifru.ifru_flags);
+			
+			Self.logger.trace("found new interface", metadata:["name":"\(nameString)", "mac":"\(macString)", "flags":"\(makeInterfaceFlags)"])
+			buildResults.update(with:NetworkInterface(name:nameString, index:i.pointee.if_index, macAddress:macString, flags:makeInterfaceFlags))
 			i = i.advanced(by:1)
 		}
+		
 		return buildResults
 	}
 }
+
