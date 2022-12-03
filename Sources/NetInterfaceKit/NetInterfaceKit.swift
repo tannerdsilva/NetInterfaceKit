@@ -52,7 +52,7 @@ public struct NetInterfaceKit {
 			getHWAddr(&interfaceRequestItem, &macStr);
 			let macString = String(cString:macstrToCstr(&macStr));
 			Self.logger.trace("found new interface", metadata:["name":"\(nameString)", "mac":"\(macString)"])
-			buildResults.update(with:NetworkInterface(name:nameString, index:i.pointee.if_index, macAddress:macString, flags:InterfaceFlags(rawValue:interfaceRequestItem.ifr_flags)))
+			buildResults.update(with:NetworkInterface(name:nameString, index:i.pointee.if_index, macAddress:macString, flags:InterfaceFlags(rawValue:interfaceRequestItem.ifr_ifru.ifru_flags)))
 			i = i.advanced(by:1)
 		}
 		
