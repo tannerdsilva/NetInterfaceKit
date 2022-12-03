@@ -23,12 +23,10 @@ let package = Package(
             name: "NetInterfaceKit",
             dependencies: [
             	"sysincludes",
-            	"linuxincludes",
             	.product(name:"Logging", package:"swift-log")
         	]
         ),
         .target(name:"sysincludes"),
-        .target(name:"linuxincludes"),
         .testTarget(
             name: "NetInterfaceKitTests",
             dependencies: ["NetInterfaceKit"]),
